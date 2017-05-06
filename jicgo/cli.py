@@ -3,21 +3,34 @@ import os
 import subprocess
 
 import yaml
+import click
 
 
 DATA_ROOT = '/Users/hartleym/data_repo'
 
+__version__ = "0.0.1"
 
-def do_some_magic():
+
+def load_project(fpath='project.yml'):
 
     with open('project.yml') as fh:
         project_data = yaml.load(fh)
 
+    return project_data
+
+
+@click.group()
+def cli():
+    pass
+
+
+@cli.command()
+def run():
+
+    project_data = load_project()
+
     container = project_data['container']
     dataset = project_data['dataset']
-
-    print(container)
-    print(dataset)
 
     command = ['docker', 'run', '-it', '--rm']
 
@@ -37,16 +50,17 @@ def do_some_magic():
 
     command += [container]
 
-    command += ['python', '/scripts/analysis.py', '--debug', '--test', '/data', '/output']
+    command += ['python',
+                '/scripts/analysis.py',
+                '--debug',
+                '--test',
+                '/data',
+                '/output']
 
     print(command)
     subprocess.call(command)
 
 
-
-
-def main():
-    do_some_magic()
 
 
 if __name__ == '__main__':

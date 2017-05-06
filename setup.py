@@ -12,6 +12,6 @@ setup(name="jicgo",
           "pyyaml",
       ],
       entry_points={
-          'console_scripts': ['jicgo=jicgo.cli:main']
+          'console_scripts': ['jicgo=jicgo.cli:cli']
       },
       license="MIT")
