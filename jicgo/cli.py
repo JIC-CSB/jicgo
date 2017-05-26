@@ -76,10 +76,7 @@ def build():
         fh.write(yaml.dump(project_data))
 
 
-@cli.command()
-def run():
-
-    project_data = load_project()
+def run_script_in_project(script, project_data):
 
     container = project_data['container']
 
@@ -91,11 +88,6 @@ def run():
     else:
         print("Must specify dataset (try jicgo data)")
         sys.exit(2)
-
-    if 'script' in project_data:
-        script = project_data['script']
-    else:
-        script = 'analysis.py'
 
     command = ['docker', 'run', '-it', '--rm']
 
@@ -124,6 +116,27 @@ def run():
     subprocess.call(command)
 
 
+@cli.command()
+def test():
+
+    project_data = load_project()
+
+    test_script = project_data['test']
+
+    run_script_in_project(test_script, project_data)
+
+
+@cli.command()
+def run():
+
+    project_data = load_project()
+
+    if 'script' in project_data:
+        script = project_data['script']
+    else:
+        script = 'analysis.py'
+
+    run_script_in_project(script, project_data)
 
 
 if __name__ == '__main__':
