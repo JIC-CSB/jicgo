@@ -2,7 +2,9 @@
 import os
 import sys
 import shutil
+import tempfile
 import subprocess
+import contextlib
 
 import Tkinter as tk
 import tkFileDialog
@@ -10,10 +12,23 @@ import tkFileDialog
 import yaml
 import click
 
+from jinja2 import Environment, PackageLoader
+
+ENV = Environment(loader=PackageLoader('jicgo', 'templates'),
+                  keep_trailing_newline=True)
 
 DATA_ROOT = '/Users/hartleym/data_repo'
 
 __version__ = "0.0.1"
+
+
+@contextlib.contextmanager
+def tmp_dir_context():
+    d = tempfile.mkdtemp()
+    try:
+        yield d
+    finally:
+        shutil.rmtree(d)
 
 
 def load_project(fpath='project.yml'):
@@ -40,6 +55,35 @@ def data():
 
     with open('project.yml', 'w') as fh:
         fh.write(yaml.dump(project_data))
+
+
+@cli.command()
+def prodbuild():
+
+    project_data = load_project()
+    name = "{}-prod".format(project_data['name'])
+
+    with tmp_dir_context() as d:
+
+        cwd = os.getcwd()
+        requirements_path = os.path.join(cwd, 'requirements.txt')
+        shutil.copy(requirements_path, d)
+
+        scripts_path = os.path.join(cwd, 'scripts')
+        tarfile_path = os.path.join(d, 'scripts.tar.gz')
+
+        tar_command = ['tar', '-zvcf', tarfile_path, 'scripts']
+
+        subprocess.call(tar_command)
+
+        dockerfile_path = os.path.join(d, 'Dockerfile')
+        with open(dockerfile_path, 'w') as fh:
+            template = ENV.get_template("Dockerfile.j2")
+            fh.write(template.render(project_data))
+
+        command = ['docker', 'build', '-t', name, d]
+
+        subprocess.call(command)
 
 
 @cli.command()
@@ -109,8 +153,9 @@ def run_script_in_project(script, project_data):
     command += ['python',
                 os.path.join('/scripts', script),
                 # '--debug',
-                '/data',
-                '/output']
+                '--dataset-path=/data',
+                '--identifier=292d8931746e26ed76dec2774b5abd617197235b',
+                '--output-path=/output']
 
     print(command)
     subprocess.call(command)
