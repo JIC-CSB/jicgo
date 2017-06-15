@@ -11,6 +11,7 @@ setup(name="jicgo",
       install_requires=[
           "pyyaml",
           "click",
+          "jinja2",
       ],
       entry_points={
           'console_scripts': ['jicgo=jicgo.cli:cli']
