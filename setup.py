@@ -10,6 +10,7 @@ setup(name="jicgo",
       author_email="matthew.hartley@jic.ac.uk",
       install_requires=[
           "pyyaml",
+          "click",
       ],
       entry_points={
           'console_scripts': ['jicgo=jicgo.cli:cli']
