@@ -155,7 +155,7 @@ def run_script_in_project(script, project_data):
                 # '--debug',
                 '--dataset-path=/data',
                 '--identifier=292d8931746e26ed76dec2774b5abd617197235b',
-                '--output-path=/output']
+                '--output-directory=/output']
 
     print(command)
     subprocess.call(command)
