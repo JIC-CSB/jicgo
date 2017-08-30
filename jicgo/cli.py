@@ -1,6 +1,7 @@
 
 import os
 import sys
+import shlex
 import shutil
 import tempfile
 import subprocess
@@ -20,6 +21,40 @@ ENV = Environment(loader=PackageLoader('jicgo', 'templates'),
 DATA_ROOT = '/Users/hartleym/data_repo'
 
 __version__ = "0.0.1"
+
+
+class DockerAssist(object):
+
+    def __init__(self, image_name, base_command):
+        self.image_name = image_name
+        self.base_command = base_command
+        self.volume_mounts = []
+
+    def add_volume_mount(self, outside, inside):
+        self.volume_mounts.append((outside, inside))
+
+    @property
+    def command(self):
+        command_string = ['docker', 'run', '--rm']
+
+        for outside, inside in self.volume_mounts:
+            command_string += ['-v', '{}:{}'.format(outside, inside)]
+
+        command_string += [self.image_name]
+
+        command_string += shlex.split(self.base_command)
+
+        return command_string
+
+    @property
+    def command_string(self):
+        return ' '.join(self.command)
+
+    def run(self):
+        subprocess.call(self.command)
+
+    def run_and_capture_stdout(self):
+        return subprocess.check_output(self.command)
 
 
 @contextlib.contextmanager
@@ -133,32 +168,51 @@ def run_script_in_project(script, project_data):
         print("Must specify dataset (try jicgo data)")
         sys.exit(2)
 
-    command = ['docker', 'run', '-it', '--rm']
+    script = project_data['script']
 
     cwd = os.getcwd()
+    output_path = os.path.join(cwd, 'output')
 
     scripts_path = os.path.join(cwd, 'scripts')
-    scripts_volume_mount = "{}:/scripts:ro".format(scripts_path)
-    command += ['-v', scripts_volume_mount]
 
-    output_path = os.path.join(cwd, 'output')
-    output_volume_mount = "{}:/output".format(output_path)
-    command += ['-v', output_volume_mount]
+    base_command = "python /scripts/{} --dataset-uri disk:/data --identifier {} --output-directory /output".format(
+        script,
+        "292d8931746e26ed76dec2774b5abd617197235b"
+    )
 
-    data_volume_mount = "{}:/data:ro".format(dataset_path)
-    command += ['-v', data_volume_mount]
+    runner = DockerAssist(container, base_command)
+    runner.add_volume_mount(dataset_path, '/data')
+    runner.add_volume_mount(output_path, '/output')
+    runner.add_volume_mount(scripts_path, '/scripts')
 
-    command += [container]
+    runner.run()
 
-    command += ['python',
-                os.path.join('/scripts', script),
-                # '--debug',
-                '--dataset-path=/data',
-                '--identifier=292d8931746e26ed76dec2774b5abd617197235b',
-                '--output-directory=/output']
+    # command = ['docker', 'run', '-it', '--rm']
 
-    print(command)
-    subprocess.call(command)
+    # cwd = os.getcwd()
+
+    # scripts_path = os.path.join(cwd, 'scripts')
+    # scripts_volume_mount = "{}:/scripts:ro".format(scripts_path)
+    # command += ['-v', scripts_volume_mount]
+
+    # output_path = os.path.join(cwd, 'output')
+    # output_volume_mount = "{}:/output".format(output_path)
+    # command += ['-v', output_volume_mount]
+
+    # data_volume_mount = "{}:/data:ro".format(dataset_path)
+    # command += ['-v', data_volume_mount]
+
+    # command += [container]
+
+    # command += ['python',
+    #             os.path.join('/scripts', script),
+    #             # '--debug',
+    #             '--dataset-uri=disk:/data',
+    #             '--identifier=292d8931746e26ed76dec2774b5abd617197235b',
+    #             '--output-directory=/output']
+
+    # print(command)
+    # subprocess.call(command)
 
 
 @cli.command()
