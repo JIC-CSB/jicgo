@@ -159,14 +159,17 @@ def run_script_in_project(script, project_data):
 
     container = project_data['container']
 
-    if 'dataset_path' in project_data:
-        dataset_path = project_data['dataset_path']
-    elif 'dataset' in project_data:
-        dataset = project_data['dataset']
-        dataset_path = os.path.join(DATA_ROOT, dataset)
-    else:
-        print("Must specify dataset (try jicgo data)")
-        sys.exit(2)
+    # if 'dataset_path' in project_data:
+    #     dataset_path = project_data['dataset_path']
+    # elif 'dataset' in project_data:
+    #     dataset = project_data['dataset']
+    #     dataset_path = os.path.join(DATA_ROOT, dataset)
+    # else:
+    #     print("Must specify dataset (try jicgo data)")
+    #     sys.exit(2)
+
+    input_dataset_uri = project_data['input_dataset'].split(':')[1]
+    output_dataset_uri = project_data['output_dataset'].split(':')[1]
 
     script = project_data['script']
 
@@ -175,17 +178,20 @@ def run_script_in_project(script, project_data):
 
     scripts_path = os.path.join(cwd, 'scripts')
 
-    base_command = "python /scripts/{} --dataset-uri disk:/data --identifier {} --output-directory /output".format(
+    identifier = project_data['sample_identifier']
+
+    base_command = "python /scripts/{} --dataset-uri disk:/data --identifier {} --output-uri disk:/output".format(
         script,
-        "292d8931746e26ed76dec2774b5abd617197235b"
+        identifier
     )
 
     runner = DockerAssist(container, base_command)
-    runner.add_volume_mount(dataset_path, '/data')
-    runner.add_volume_mount(output_path, '/output')
+    runner.add_volume_mount(input_dataset_uri, '/data')
+    runner.add_volume_mount(output_dataset_uri, '/output')
     runner.add_volume_mount(scripts_path, '/scripts')
 
     runner.run()
+    # print(runner.command)
 
 
 @cli.command()
