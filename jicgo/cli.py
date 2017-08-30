@@ -155,7 +155,7 @@ def build():
         fh.write(yaml.dump(project_data))
 
 
-def run_script_in_project(script, project_data):
+def run_script_in_project(project_data):
 
     container = project_data['container']
 
@@ -170,6 +170,7 @@ def run_script_in_project(script, project_data):
 
     input_dataset_uri = project_data['input_dataset'].split(':')[1]
     output_dataset_uri = project_data['output_dataset'].split(':')[1]
+    resource_dataset_uri = project_data['resource_dataset'].split(':')[1]
 
     script = project_data['script']
 
@@ -180,13 +181,14 @@ def run_script_in_project(script, project_data):
 
     identifier = project_data['sample_identifier']
 
-    base_command = "python /scripts/{} --dataset-uri disk:/data --identifier {} --output-uri disk:/output".format(
+    base_command = "python /scripts/{} --dataset-uri disk:/data --identifier {} --resource-uri disk:/resource --output-uri disk:/output".format(
         script,
         identifier
     )
 
     runner = DockerAssist(container, base_command)
     runner.add_volume_mount(input_dataset_uri, '/data')
+    runner.add_volume_mount(resource_dataset_uri, '/resource')
     runner.add_volume_mount(output_dataset_uri, '/output')
     runner.add_volume_mount(scripts_path, '/scripts')
 
@@ -204,17 +206,32 @@ def test():
     run_script_in_project(test_script, project_data)
 
 
+class Analysis(object):
+
+    def __init__(self, analysis_file='analysis.yml'):
+
+        with open(analysis_file) as fh:
+            self.config = yaml.load(fh)
+
+    def run(self):
+
+        run_script_in_project(self.config)
+
+
 @cli.command()
 def run():
 
-    project_data = load_project()
+    analysis = Analysis()
 
-    if 'script' in project_data:
-        script = project_data['script']
-    else:
-        script = 'analysis.py'
+    analysis.run()
+    # project_data = load_project()
 
-    run_script_in_project(script, project_data)
+    # if 'script' in project_data:
+    #     script = project_data['script']
+    # else:
+    #     script = 'analysis.py'
+
+    # run_script_in_project(script, project_data)
 
 
 if __name__ == '__main__':
