@@ -187,33 +187,6 @@ def run_script_in_project(script, project_data):
 
     runner.run()
 
-    # command = ['docker', 'run', '-it', '--rm']
-
-    # cwd = os.getcwd()
-
-    # scripts_path = os.path.join(cwd, 'scripts')
-    # scripts_volume_mount = "{}:/scripts:ro".format(scripts_path)
-    # command += ['-v', scripts_volume_mount]
-
-    # output_path = os.path.join(cwd, 'output')
-    # output_volume_mount = "{}:/output".format(output_path)
-    # command += ['-v', output_volume_mount]
-
-    # data_volume_mount = "{}:/data:ro".format(dataset_path)
-    # command += ['-v', data_volume_mount]
-
-    # command += [container]
-
-    # command += ['python',
-    #             os.path.join('/scripts', script),
-    #             # '--debug',
-    #             '--dataset-uri=disk:/data',
-    #             '--identifier=292d8931746e26ed76dec2774b5abd617197235b',
-    #             '--output-directory=/output']
-
-    # print(command)
-    # subprocess.call(command)
-
 
 @cli.command()
 def test():
