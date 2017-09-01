@@ -164,6 +164,22 @@ def build():
         fh.write(yaml.dump(project_data))
 
 
+@cli.command()
+def singbuild():
+
+    analysis = Analysis()
+
+    name = analysis.name + '-prod'
+
+    docker_dir_path = os.path.join('docker', 'packed-for-cluster')
+
+    print(docker_dir_path)
+
+    command = ['docker', 'build', '-t', name, docker_dir_path]
+
+    subprocess.call(command)
+
+
 def run_script_in_project(project_data):
 
     container = project_data['container']
@@ -312,6 +328,7 @@ class Analysis(object):
         command += ['--identifier']
 
         return ' '.join(command)
+
 
 @cli.command()
 def run():
