@@ -15,6 +15,8 @@ import click
 
 from jinja2 import Environment, PackageLoader
 
+import dtoolcore
+
 ENV = Environment(loader=PackageLoader('jicgo', 'templates'),
                   keep_trailing_newline=True)
 
@@ -185,6 +187,23 @@ def run_script_in_project(project_data):
         script,
         identifier
     )
+
+    input_dataset = dtoolcore.DataSet.from_uri(project_data['input_dataset'])
+    resource_dataset = dtoolcore.DataSet.from_uri(project_data['resource_dataset'])
+    output_dataset = dtoolcore.ProtoDataSet.from_uri(project_data['output_dataset'])
+
+    click.secho("Running analysis:      ", nl=False)
+    click.secho("{}".format(project_data['name']), fg='green')
+    click.secho("Script:                ", nl=False)
+    click.secho("{}".format(script), fg='yellow')
+    click.secho("Input dataset:         ", nl=False)
+    click.secho("{} ({})".format(input_dataset.name, project_data['input_dataset']), fg='cyan')
+    click.secho("Resource dataset:      ", nl=False)
+    click.secho("{} ({})".format(resource_dataset.name, project_data['resource_dataset']), fg='cyan')
+    click.secho("Output dataset:        ", nl=False)
+    click.secho("{} ({})".format(output_dataset.name, project_data['output_dataset']), fg='cyan')
+    click.secho("Processing identifier: ", nl=False)
+    click.secho("{} ({})".format(identifier, input_dataset.item_properties(identifier)['relpath']), fg='yellow')
 
     runner = DockerAssist(container, base_command)
     runner.add_volume_mount(input_dataset_uri, '/data')
