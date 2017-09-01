@@ -52,8 +52,15 @@ class DockerAssist(object):
     def command_string(self):
         return ' '.join(self.command)
 
-    def run(self):
-        subprocess.call(self.command)
+    def run(self, extra_args):
+        command = self.command + shlex.split(extra_args)
+
+        subprocess.call(command)
+
+    def show_run_command(self, extra_args):
+        command = self.command + shlex.split(extra_args)
+
+        print(command)
 
     def run_and_capture_stdout(self):
         return subprocess.check_output(self.command)
@@ -232,17 +239,91 @@ class Analysis(object):
         with open(analysis_file) as fh:
             self.config = yaml.load(fh)
 
+            self._input_dataset = None
+            self._output_dataset = None
+
+    @property
+    def name(self):
+        return self.config['name']
+
+    @property
+    def input_dataset(self):
+        if self._input_dataset is None:
+            self._input_dataset = dtoolcore.DataSet.from_uri(
+                self.config['input_dataset_uri']
+            )
+        return self._input_dataset
+
+    @property
+    def output_dataset(self):
+        if self._output_dataset is None:
+            self._output_dataset = dtoolcore.ProtoDataSet.from_uri(
+                self.config['output_dataset_uri']
+            )
+        return self._output_dataset
+
+    @property
+    def input_path(self):
+        return self.config['input_dataset_uri'].split(':')[1]
+
+    @property
+    def output_path(self):
+        return self.config['output_dataset_uri'].split(':')[1]
+
+    def summary(self):
+
+        click.secho("Analysis name:         ", nl=False)
+        click.secho("{}".format(self.name), fg='green')
+        # click.secho("Script:                ", nl=False)
+        # click.secho("{}".format(script), fg='yellow')
+        click.secho("Input dataset:         ", nl=False)
+        click.secho("{} ({})".format(
+            self.input_dataset.name,
+            self.config['input_dataset_uri']
+            ), fg='cyan')
+        # click.secho("Resource dataset:      ", nl=False)
+        # click.secho("{} ({})".format(resource_dataset.name, project_data['resource_dataset']), fg='cyan')
+        click.secho("Output dataset:        ", nl=False)
+        click.secho("{} ({})".format(
+            self.output_dataset.name,
+            self.config['output_dataset_uri']
+            ), fg='cyan')
+
     def run(self):
 
-        run_script_in_project(self.config)
+        # run_script_in_project(self.config)
 
+        cwd = os.getcwd()
+
+        runner = DockerAssist(self.config['container'], self.base_command)
+        runner.add_volume_mount(self.input_path, '/data')
+        runner.add_volume_mount(self.output_path, '/output')
+        runner.add_volume_mount(os.path.join(cwd, 'scripts'), '/scripts')
+
+        runner.run(self.config['sample_identifier'])
+
+    # FIXME - should be in a separate class, probably
+    @property
+    def base_command(self):
+        command = ['python']
+        command += ['/scripts/{}'.format(self.config['script'])]
+        command += ['--dataset-uri', 'disk:/data']
+        command += ['--output-uri', 'disk:/output']
+        command += ['--identifier']
+
+        return ' '.join(command)
 
 @cli.command()
 def run():
 
     analysis = Analysis()
+    analysis.summary()
+
+    print(analysis.base_command)
 
     analysis.run()
+
+    # analysis.run()
     # project_data = load_project()
 
     # if 'script' in project_data:
