@@ -131,6 +131,37 @@ def prodbuild():
 
 
 @cli.command()
+def singularity():
+
+    project_data = load_project()
+    production_docker_name = "{}-prod".format(project_data['name'])
+    singularity_name = project_data['name']
+    singularity_image_dir = project_data['singularity_image_dir']
+    singularity_image_dir = os.path.abspath(singularity_image_dir)
+
+    if not os.path.isdir(singularity_image_dir):
+        os.mkdir(singularity_image_dir)
+
+    build_command = [
+        'docker',
+        'run',
+        '-v',
+        '/var/run/docker.sock:/var/run/docker.sock',
+        '-v',
+        '{}:/output'.format(singularity_image_dir),
+        '--privileged',
+        '-t',
+        '--rm',
+        'mcdocker2singularity',
+        production_docker_name,
+        singularity_name
+    ]
+
+    print(' '.join(build_command))
+    subprocess.call(build_command)
+
+
+@cli.command()
 def build():
 
     project_data = load_project()
@@ -169,15 +200,39 @@ def singbuild():
 
     analysis = Analysis()
 
-    name = analysis.name + '-prod'
+    production_docker_name = analysis.name + '-prod'
 
     docker_dir_path = os.path.join('docker', 'packed-for-cluster')
 
-    print(docker_dir_path)
-
-    command = ['docker', 'build', '-t', name, docker_dir_path]
+    command = ['docker', 'build', '-t', production_docker_name, docker_dir_path]
 
     subprocess.call(command)
+
+    singularity_image_dir = analysis.config['singularity_image_dir']
+    singularity_image_dir = os.path.abspath(singularity_image_dir)
+
+    if not os.path.isdir(singularity_image_dir):
+        os.mkdir(singularity_image_dir)
+
+    build_command = [
+        'docker',
+        'run',
+        '-v',
+        '/var/run/docker.sock:/var/run/docker.sock',
+        '-v',
+        '{}:/output'.format(singularity_image_dir),
+        '--privileged',
+        '-t',
+        '--rm',
+        'mcdocker2singularity',
+        production_docker_name,
+        analysis.name
+    ]
+
+    print(' '.join(build_command))
+    subprocess.call(build_command)
+
+
 
 
 def run_script_in_project(project_data):
