@@ -1,0 +1,6 @@
+{% for job in jobs -%}
+#!/bin/bash
+{% include 'slurm_options.j2' %}
+
+{{ job }}
+{% endfor -%}

@@ -1,0 +1,7 @@
+IMAGE_NAME={{ singularity_image }}
+singularity exec  \
+  $IMAGE_NAME  \
+  {{ command }} \
+    --dataset-uri {{ input_dataset_uri }}  \
+    --output-uri {{ output_dataset_uri }}  \
+    --identifier {{ identifier }}
