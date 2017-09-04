@@ -25,6 +25,17 @@ DATA_ROOT = '/Users/hartleym/data_repo'
 __version__ = "0.0.1"
 
 
+def identifiers_where_overlay_is_true(dataset, overlay_name):
+
+    overlay = dataset.get_overlay(overlay_name)
+
+    selected = [identifier
+                for identifier in dataset.identifiers
+                if overlay[identifier]]
+
+    return selected
+
+
 class DockerAssist(object):
 
     def __init__(self, image_name, base_command):
@@ -233,8 +244,6 @@ def singbuild():
     subprocess.call(build_command)
 
 
-
-
 def run_script_in_project(project_data):
 
     container = project_data['container']
@@ -383,6 +392,44 @@ class Analysis(object):
         command += ['--identifier']
 
         return ' '.join(command)
+
+
+def generate_rendered_job(analysis, template, identifier):
+
+    cluster_config = analysis.config['runners']['cluster']
+
+    job = {}
+    job.update(cluster_config)
+
+    command = 'python /scripts/{}'.format(analysis.config['script'])
+    job['command'] = command
+    job['identifier'] = identifier
+
+    return template.render(job)
+
+
+@cli.command()
+def cluster():
+
+    analysis = Analysis()
+
+    identifiers = identifiers_where_overlay_is_true(
+        analysis.input_dataset,
+        'is_jpeg'
+    )
+
+    template = ENV.get_template("singularity_job.sh.j2")
+    slurm_template = ENV.get_template("slurm_script_multiple.slurm.j2")
+
+    jobs = [generate_rendered_job(analysis, template, i) for i in identifiers]
+
+    params = {
+        "partition": "rg-mh",
+        "jobmem": "2048",
+        "jobs": jobs
+    }
+
+    print(slurm_template.render(params))
 
 
 @cli.command()
