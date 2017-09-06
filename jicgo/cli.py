@@ -36,6 +36,17 @@ def identifiers_where_overlay_is_true(dataset, overlay_name):
     return selected
 
 
+def identifiers_where_overlay_has_value(dataset, overlay_name, value):
+
+    overlay = dataset.get_overlay(overlay_name)
+
+    selected = [identifier
+                for identifier in dataset.identifiers
+                if overlay[identifier] == value]
+
+    return selected
+
+
 class DockerAssist(object):
 
     def __init__(self, image_name, base_command):
@@ -321,6 +332,7 @@ class Analysis(object):
 
             self._input_dataset = None
             self._output_dataset = None
+            self._resource_dataset = None
 
     @property
     def name(self):
@@ -341,6 +353,19 @@ class Analysis(object):
                 self.config['output_dataset_uri']
             )
         return self._output_dataset
+
+    @property
+    def resource_dataset(self):
+        if self._resource_dataset is None:
+            if 'resource_dataset_uri' in self.config:
+                self._resource_dataset = dtoolcore.DataSet.from_uri(
+                    self.config['resource_dataset_uri']
+                )
+        return self._resource_dataset
+
+    @property
+    def resource_path(self):
+        return self.config['resource_dataset_uri'].split(':')[1]
 
     @property
     def input_path(self):
@@ -369,9 +394,10 @@ class Analysis(object):
             self.config['output_dataset_uri']
             ), fg='cyan')
 
-    def run(self):
+    def run(self, identifier):
 
-        # run_script_in_project(self.config)
+        click.secho("Running on identifier: ", nl=False)
+        click.secho("{}".format(identifier), fg='yellow')
 
         cwd = os.getcwd()
 
@@ -380,7 +406,10 @@ class Analysis(object):
         runner.add_volume_mount(self.output_path, '/output')
         runner.add_volume_mount(os.path.join(cwd, 'scripts'), '/scripts')
 
-        runner.run(self.config['sample_identifier'])
+        if self.resource_dataset is not None:
+            runner.add_volume_mount(self.resource_path, '/resource')
+
+        runner.run(identifier)
 
     # FIXME - should be in a separate class, probably
     @property
@@ -389,6 +418,10 @@ class Analysis(object):
         command += ['/scripts/{}'.format(self.config['script'])]
         command += ['--dataset-uri', 'disk:/data']
         command += ['--output-uri', 'disk:/output']
+
+        if self.resource_dataset is not None:
+            command += ['--resource-uri', 'disk:/resource']
+
         command += ['--identifier']
 
         return ' '.join(command)
@@ -438,19 +471,15 @@ def run():
     analysis = Analysis()
     analysis.summary()
 
-    print(analysis.base_command)
+    # identifiers = analysis.input_dataset.identifiers
+    identifiers = identifiers_where_overlay_has_value(
+        analysis.input_dataset,
+        "type",
+        "segmentation"
+    )
 
-    analysis.run()
-
-    # analysis.run()
-    # project_data = load_project()
-
-    # if 'script' in project_data:
-    #     script = project_data['script']
-    # else:
-    #     script = 'analysis.py'
-
-    # run_script_in_project(script, project_data)
+    for identifier in identifiers:
+        analysis.run(identifier)
 
 
 if __name__ == '__main__':
