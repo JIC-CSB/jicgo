@@ -74,13 +74,21 @@ class DockerAssist(object):
     def command_string(self):
         return ' '.join(self.command)
 
-    def run(self, extra_args):
-        command = self.command + shlex.split(extra_args)
+    def run(self, extra_args=None):
+
+        if extra_args is not None:
+            command = self.command + shlex.split(extra_args)
+        else:
+            command = self.command
 
         subprocess.call(command)
 
-    def show_run_command(self, extra_args):
-        command = self.command + shlex.split(extra_args)
+    def show_run_command(self, extra_args=None):
+
+        if extra_args is not None:
+            command = self.command + shlex.split(extra_args)
+        else:
+            command = self.command
 
         print(command)
 
@@ -465,13 +473,7 @@ def cluster():
     print(slurm_template.render(params))
 
 
-@cli.command()
-def run():
-
-    analysis = Analysis()
-    analysis.summary()
-
-    # identifiers = analysis.input_dataset.identifiers
+def runall():
     identifiers = identifiers_where_overlay_has_value(
         analysis.input_dataset,
         "type",
@@ -481,6 +483,39 @@ def run():
     for identifier in identifiers:
         analysis.run(identifier)
 
+
+def uri_to_path(uri):
+    return uri.split(':')[1]
+
+
+@cli.command()
+def run():
+
+    with open('analysis.yml') as fh:
+        config = yaml.load(fh)
+
+    analysis_config = config['analyses']['test_plot_indexing']
+
+    command = ['python']
+    command += ['/scripts/{}'.format(analysis_config['script'])]
+    command += ['--dataset-uri', 'disk:/data']
+    command += ['--output-uri', 'disk:/output']
+
+    cwd = os.getcwd()
+    runner = DockerAssist(config['container'], ' '.join(command))
+
+    input_path = uri_to_path(analysis_config['input_dataset_uri'])
+    output_path = uri_to_path(analysis_config['output_dataset_uri'])
+    runner.add_volume_mount(input_path, '/data')
+    runner.add_volume_mount(output_path, '/output')
+    runner.add_volume_mount(os.path.join(cwd, 'scripts'), '/scripts')
+
+    runner.run()
+
+    # runner = DockerAssist(self.config['container'], self.base_command)
+    # runner.add_volume_mount(self.input_path, '/data')
+    # runner.add_volume_mount(self.output_path, '/output')
+    # runner.add_volume_mount(os.path.join(cwd, 'scripts'), '/scripts')
 
 if __name__ == '__main__':
     main()
